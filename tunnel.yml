@@ -3,7 +3,7 @@ server:
   REMOTE_USER: your-username
 
 nginx:
-  site_config_file: /etc/nginx/sites-enabled/reverse_proxy
+  site_config_file_name: reverse_proxy
   server_name: your-host.com
 
 tunnels:

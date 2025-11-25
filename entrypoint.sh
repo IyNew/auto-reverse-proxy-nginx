@@ -64,6 +64,34 @@ if [ -z "$NGINX_SERVER_NAME" ] || [ "$NGINX_SERVER_NAME" = "null" ]; then
     NGINX_SERVER_NAME="$REMOTE_HOST"
 fi
 
+# Read HTTPS setting
+NGINX_HTTPS=$(yq eval '.nginx.https' "$TUNNEL_CONFIG")
+HTTPS_ENABLED=0
+CERTBOT_EMAIL=""
+CERTBOT_DOMAINS=""
+CERTBOT_RENEW_DAYS=""
+CERTBOT_FORCE_RENEW=""
+
+if [ "$NGINX_HTTPS" = "true" ]; then
+    HTTPS_ENABLED=1
+    
+    # Read certbot settings only if HTTPS is enabled
+    CERTBOT_EMAIL=$(yq eval '.nginx.certbot.email' "$TUNNEL_CONFIG")
+    CERTBOT_RENEW_DAYS=$(yq eval '.nginx.certbot.renew_days' "$TUNNEL_CONFIG")
+    CERTBOT_FORCE_RENEW=$(yq eval '.nginx.certbot.force_renew' "$TUNNEL_CONFIG")
+    
+    # Read certbot domains array
+    CERTBOT_DOMAINS=$(yq eval '.nginx.certbot.domains | .[]' "$TUNNEL_CONFIG" | tr '\n' ' ')
+    
+    # Validate required certbot settings
+    if [ -z "$CERTBOT_EMAIL" ] || [ "$CERTBOT_EMAIL" = "null" ]; then
+        echo "Warning: HTTPS is enabled but certbot.email is not set"
+    fi
+    if [ -z "$CERTBOT_DOMAINS" ]; then
+        echo "Warning: HTTPS is enabled but certbot.domains is not set"
+    fi
+fi
+
 # Display configuration
 echo "=========================================="
 echo "Reverse SSH Tunnel Configuration"
@@ -76,6 +104,15 @@ echo "Config File: $TUNNEL_CONFIG"
 if [ -n "$NGINX_SITE_CONFIG" ]; then
     echo "Nginx Config (sites-available): $SITES_AVAILABLE/$NGINX_SITE_CONFIG_NAME"
     echo "Nginx Symlink (sites-enabled): $NGINX_SITE_CONFIG"
+    if [ "$HTTPS_ENABLED" -eq 1 ]; then
+        echo "HTTPS: Enabled"
+        echo "Certbot Email: $CERTBOT_EMAIL"
+        echo "Certbot Domains: $CERTBOT_DOMAINS"
+        echo "Certbot Renew Days: $CERTBOT_RENEW_DAYS"
+        echo "Certbot Force Renew: $CERTBOT_FORCE_RENEW"
+    else
+        echo "HTTPS: Disabled"
+    fi
 fi
 echo "=========================================="
 echo ""
@@ -164,6 +201,57 @@ if [ -n "$NGINX_SITE_CONFIG" ] && [ -f "$NGINX_TEMPLATE" ]; then
         
         if [ $? -eq 0 ]; then
             echo "✓ Nginx configuration updated and reloaded successfully"
+            
+            # Enable HTTPS with certbot
+            echo ""
+            echo "=========================================="
+            echo "Configuring HTTPS with Certbot"
+            echo "=========================================="
+            echo "Running certbot for domain: $NGINX_SERVER_NAME"
+            
+            # Run certbot to enable HTTPS
+            # --nginx: Use nginx plugin to automatically configure SSL
+            # --non-interactive: Run without user interaction
+            # --agree-tos: Agree to terms of service
+            # --redirect: Add redirect from HTTP to HTTPS
+            # --email: Optional, can be set via CERTBOT_EMAIL env var
+            CERTBOT_EMAIL=${CERTBOT_EMAIL:-""}
+            CERTBOT_ARGS="--nginx --non-interactive --agree-tos --redirect"
+            
+            if [ -n "$CERTBOT_EMAIL" ]; then
+                CERTBOT_ARGS="$CERTBOT_ARGS --email $CERTBOT_EMAIL"
+            else
+                CERTBOT_ARGS="$CERTBOT_ARGS --register-unsafely-without-email"
+            fi
+            
+            ssh -i "$SSH_KEY_PATH" \
+                -o StrictHostKeyChecking=no \
+                -o UserKnownHostsFile=/dev/null \
+                ${REMOTE_USER}@${REMOTE_HOST} \
+                "sudo certbot $CERTBOT_ARGS -d $NGINX_SERVER_NAME" 2>&1
+            
+            if [ $? -eq 0 ]; then
+                echo "✓ HTTPS configured successfully with certbot"
+                echo "Testing nginx configuration after certbot changes..."
+                ssh -i "$SSH_KEY_PATH" \
+                    -o StrictHostKeyChecking=no \
+                    -o UserKnownHostsFile=/dev/null \
+                    ${REMOTE_USER}@${REMOTE_HOST} \
+                    "sudo nginx -t && sudo systemctl reload nginx" 2>&1
+                
+                if [ $? -eq 0 ]; then
+                    echo "✓ Nginx reloaded successfully after certbot configuration"
+                    HTTPS_ENABLED=1
+                else
+                    echo "✗ Warning: Failed to reload nginx after certbot configuration"
+                fi
+            else
+                echo "✗ Warning: Certbot configuration failed or certificate already exists"
+                echo "This is not critical - continuing with tunnel setup"
+            fi
+            
+            echo "=========================================="
+            echo ""
         else
             echo "✗ Failed to update nginx configuration"
             echo "Warning: Continuing with tunnel setup despite nginx update failure"
@@ -245,10 +333,14 @@ if [ -n "$NGINX_SITE_CONFIG" ]; then
     echo "=========================================="
     echo "Services are available at:"
     echo "=========================================="
+    PROTOCOL="http"
+    if [ "$HTTPS_ENABLED" -eq 1 ]; then
+        PROTOCOL="https"
+    fi
     for TUNNEL_NAME in $TUNNEL_NAMES; do
         REMOTE_PORT=$(yq eval ".tunnels.$TUNNEL_NAME.remote_port" "$TUNNEL_CONFIG")
         if [ -n "$REMOTE_PORT" ] && [ "$REMOTE_PORT" != "null" ]; then
-            echo "  http://${NGINX_SERVER_NAME}/${TUNNEL_NAME}/"
+            echo "  ${PROTOCOL}://${NGINX_SERVER_NAME}/${TUNNEL_NAME}/"
         fi
     done
     echo "=========================================="

@@ -4,7 +4,15 @@ server:
 
 nginx:
   site_config_file_name: reverse_proxy
-  server_name: your-host.com
+  server_name: your-custom-domain.com # if you don't have a custom domain, use your-host.com
+  https: false #only works with custom domain, if you don't want to use https, set to false
+  certbot:
+    email: your-email@example.com
+    domains:
+      - your-custom-domain.com
+      - www.your-custom-domain.com
+    renew_days: 30
+    force_renew: false
 
 tunnels:
   app1:

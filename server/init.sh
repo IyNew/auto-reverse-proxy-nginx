@@ -34,37 +34,20 @@ print_info() {
     echo "${BOLD}ℹ${RESET} $1"
 }
 
-# Parse command line arguments
-SKIP_NGINX=false
-for arg in "$@"; do
-    case $arg in
-        --no-nginx)
-            SKIP_NGINX=true
-            shift
-            ;;
-        *)
-            print_warning "Unknown option: $arg"
-            ;;
-    esac
-done
-
 # Check if running as root
-if [ "$EUID" -ne 0 ]; then 
+if [ "$EUID" -ne 0 ]; then
     print_error "Please run as root (use sudo)"
     exit 1
 fi
 
 if command -v tput >/dev/null 2>&1 && [ -t 1 ]; then
     echo "${BOLD}==========================================${RESET}"
-    echo "${BOLD}Server Setup for Reverse Proxy${RESET}"
+    echo "${BOLD}Server Initialization${RESET}"
     echo "${BOLD}==========================================${RESET}"
 else
     echo "=========================================="
-    echo "Server Setup for Reverse Proxy"
+    echo "Server Initialization"
     echo "=========================================="
-fi
-if [ "$SKIP_NGINX" = true ]; then
-    print_info "Mode: SSH only (nginx skipped)"
 fi
 echo ""
 
@@ -100,12 +83,7 @@ if [ ! -f "${SSHD_CONFIG}.backup" ]; then
     print_success "Created backup of SSH config"
 fi
 
-# Set GatewayPorts value based on mode
-if [ "$SKIP_NGINX" = true ]; then
-    GATEWAY_PORTS_VALUE="yes"
-else
-    GATEWAY_PORTS_VALUE="clientspecified"
-fi
+GATEWAY_PORTS_VALUE="clientspecified"
 
 # Check if GatewayPorts is already set
 if grep -q "^GatewayPorts" "$SSHD_CONFIG"; then
@@ -133,8 +111,7 @@ fi
 
 echo ""
 
-# Step 2: Install nginx (skip if --no-nginx flag is set)
-if [ "$SKIP_NGINX" = false ]; then
+# Step 2: Install nginx
 if command -v tput >/dev/null 2>&1 && [ -t 1 ]; then
     echo "${BOLD}Step 2:${RESET} Installing nginx..."
 else
@@ -148,7 +125,7 @@ if command -v nginx &> /dev/null; then
     print_info "Current version: $NGINX_VERSION"
 else
     print_info "Installing nginx..."
-    
+
     case $OS in
         ubuntu|debian)
             apt-get update
@@ -166,7 +143,7 @@ else
             exit 1
             ;;
     esac
-    
+
     if [ $? -eq 0 ]; then
         print_success "Nginx installed successfully"
     else
@@ -181,11 +158,11 @@ print_success "Nginx enabled to start on boot"
 
 echo ""
 
-# Step 2.5: Configure server_names_hash_bucket_size
+# Step 3: Configure server_names_hash_bucket_size
 if command -v tput >/dev/null 2>&1 && [ -t 1 ]; then
-    echo "${BOLD}Step 2.5:${RESET} Configuring server_names_hash_bucket_size..."
+    echo "${BOLD}Step 3:${RESET} Configuring server_names_hash_bucket_size..."
 else
-    echo "Step 2.5: Configuring server_names_hash_bucket_size..."
+    echo "Step 3: Configuring server_names_hash_bucket_size..."
 fi
 NGINX_CONF="/etc/nginx/nginx.conf"
 
@@ -230,11 +207,11 @@ fi
 
 echo ""
 
-# Step 2.75: Install certbot
+# Step 4: Install certbot
 if command -v tput >/dev/null 2>&1 && [ -t 1 ]; then
-    echo "${BOLD}Step 2.75:${RESET} Installing certbot..."
+    echo "${BOLD}Step 4:${RESET} Installing certbot..."
 else
-    echo "Step 2.75: Installing certbot..."
+    echo "Step 4: Installing certbot..."
 fi
 
 # Check if certbot is already installed
@@ -244,7 +221,7 @@ if command -v certbot &> /dev/null; then
     print_info "Current version: $CERTBOT_VERSION"
 else
     print_info "Installing certbot..."
-    
+
     case $OS in
         ubuntu|debian)
             apt-get update
@@ -262,7 +239,7 @@ else
             exit 1
             ;;
     esac
-    
+
     if [ $? -eq 0 ]; then
         print_success "Certbot installed successfully"
     else
@@ -273,11 +250,11 @@ fi
 
 echo ""
 
-# Step 3: Start/Reload nginx
+# Step 5: Start nginx
 if command -v tput >/dev/null 2>&1 && [ -t 1 ]; then
-    echo "${BOLD}Step 3:${RESET} Starting nginx service..."
+    echo "${BOLD}Step 5:${RESET} Starting nginx service..."
 else
-    echo "Step 3: Starting nginx service..."
+    echo "Step 5: Starting nginx service..."
 fi
 if systemctl is-active --quiet nginx; then
     systemctl reload nginx
@@ -288,28 +265,25 @@ else
 fi
 
 echo ""
-fi  # End of nginx section
 
 if command -v tput >/dev/null 2>&1 && [ -t 1 ]; then
     echo "${BOLD}==========================================${RESET}"
-    echo "${GREEN}${BOLD}Setup completed successfully!${RESET}"
+    echo "${GREEN}${BOLD}Initialization completed successfully!${RESET}"
     echo "${BOLD}==========================================${RESET}"
 else
     echo "=========================================="
-    echo "Setup completed successfully!"
+    echo "Initialization completed successfully!"
     echo "=========================================="
 fi
 echo ""
 echo "Summary:"
-if [ "$SKIP_NGINX" = true ]; then
-    print_success "SSH GatewayPorts configured to 'yes'"
-    print_success "SSH service restarted"
-else
-    print_success "SSH GatewayPorts configured to 'clientspecified'"
-    print_success "SSH service restarted"
-    print_success "Nginx installed"
-    print_success "server_names_hash_bucket_size set to 256"
-    print_success "Certbot installed"
-    print_success "Nginx service started"
-fi
+print_success "SSH GatewayPorts configured to 'clientspecified'"
+print_success "SSH service restarted"
+print_success "Nginx installed"
+print_success "server_names_hash_bucket_size set to 256"
+print_success "Certbot installed"
+print_success "Nginx service started"
+echo ""
+echo "You can now add domain configurations using:"
+echo "  sudo ./setup-server.sh servers/<domain>.yml"
 echo ""

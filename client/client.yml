@@ -1,0 +1,12 @@
+ssh:
+  remote_host: your-host.com
+  remote_user: ubuntu
+
+tunnels:
+  app1:
+    local_port: 5000
+    remote_port: 8000
+
+  app2:
+    local_port: 4999
+    remote_port: 8090

@@ -15,26 +15,18 @@ ARG SSH_KEY_FILE=ec2.pem
 COPY ${SSH_KEY_FILE} /app/ssh/ec2.pem
 RUN chmod 600 /app/ssh/ec2.pem
 
-# Copy entrypoint script, tunnel configuration, and nginx template
+# Copy entrypoint script and client configuration
 COPY entrypoint.sh /app/entrypoint.sh
-COPY tunnel.yml /app/tunnel.yml
-COPY nginx.example /app/nginx.example
+COPY client.yml /app/client.yml
 RUN chmod +x /app/entrypoint.sh
 
 WORKDIR /app
 
 # Set environment variables with defaults
-ENV REMOTE_PORT=5000
-ENV LOCAL_PORT=5000
-ENV REMOTE_USER=ubuntu
-ENV REMOTE_HOST=""
 ENV SSH_KEY_PATH=/app/ssh/ec2.pem
-ENV TUNNEL_CONFIG=/app/tunnel.yml
-ENV LOG_FILE=/app/logs/tunnel.log
+ENV CLIENT_CONFIG=/app/client.yml
+ENV LOG_DIR=/app/logs
 ENV TARGET_HOST=localhost
-
-# Expose the local port (for documentation, actual forwarding is via SSH)
-EXPOSE ${LOCAL_PORT}
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 

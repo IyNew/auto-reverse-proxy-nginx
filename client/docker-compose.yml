@@ -10,15 +10,15 @@ services:
     container_name: reverse-tunnel
     restart: unless-stopped
     environment:
-      # Tunnel configuration file (copied into image during build)
-      - TUNNEL_CONFIG=/app/tunnel.yml
-      
+      # Client configuration file (copied into image during build)
+      - CLIENT_CONFIG=/app/client.yml
+
       # SSH key path (copied into image during build)
       - SSH_KEY_PATH=/app/ssh/ec2.pem
-      
+
       # Target host for port forwarding (use 'localhost' for host network mode)
       - TARGET_HOST=localhost
-      
+
       # Logging directory
       - LOG_DIR=/app/logs
     volumes:

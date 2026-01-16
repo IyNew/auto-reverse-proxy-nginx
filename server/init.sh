@@ -250,11 +250,66 @@ fi
 
 echo ""
 
-# Step 5: Start nginx
+# Step 5: Install yq
 if command -v tput >/dev/null 2>&1 && [ -t 1 ]; then
-    echo "${BOLD}Step 5:${RESET} Starting nginx service..."
+    echo "${BOLD}Step 5:${RESET} Installing yq..."
 else
-    echo "Step 5: Starting nginx service..."
+    echo "Step 5: Installing yq..."
+fi
+
+# Check if yq is already installed
+if command -v yq &> /dev/null; then
+    print_warning "yq is already installed"
+    YQ_VERSION=$(yq --version 2>&1)
+    print_info "Current version: $YQ_VERSION"
+else
+    print_info "Installing yq..."
+
+    YQ_VERSION="v4.44.3"
+    YQ_BINARY="yq_linux_amd64"
+
+    # Detect architecture
+    ARCH=$(uname -m)
+    case $ARCH in
+        x86_64|amd64)
+            YQ_BINARY="yq_linux_amd64"
+            ;;
+        aarch64|arm64)
+            YQ_BINARY="yq_linux_arm64"
+            ;;
+        armv7l|armv6l)
+            YQ_BINARY="yq_linux_arm"
+            ;;
+        *)
+            print_error "Unsupported architecture: $ARCH"
+            exit 1
+            ;;
+    esac
+
+    # Download yq
+    print_info "Downloading yq $YQ_VERSION for $ARCH..."
+    if wget -q "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY}" -O /usr/local/bin/yq; then
+        chmod +x /usr/local/bin/yq
+        print_success "yq installed successfully"
+    else
+        # Try with curl if wget fails
+        if curl -sL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY}" -o /usr/local/bin/yq; then
+            chmod +x /usr/local/bin/yq
+            print_success "yq installed successfully"
+        else
+            print_error "Failed to download yq"
+            exit 1
+        fi
+    fi
+fi
+
+echo ""
+
+# Step 6: Start nginx
+if command -v tput >/dev/null 2>&1 && [ -t 1 ]; then
+    echo "${BOLD}Step 6:${RESET} Starting nginx service..."
+else
+    echo "Step 6: Starting nginx service..."
 fi
 if systemctl is-active --quiet nginx; then
     systemctl reload nginx
@@ -282,6 +337,7 @@ print_success "SSH service restarted"
 print_success "Nginx installed"
 print_success "server_names_hash_bucket_size set to 256"
 print_success "Certbot installed"
+print_success "yq installed"
 print_success "Nginx service started"
 echo ""
 echo "You can now add domain configurations using:"

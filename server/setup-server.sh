@@ -25,6 +25,30 @@ if [ ! -f "$DOMAIN_CONFIG" ]; then
     exit 1
 fi
 
+# Check if yq is installed and is the correct version
+if ! command -v yq &> /dev/null; then
+    echo "Error: yq is not installed"
+    echo "Please run './init.sh' first to install yq"
+    exit 1
+fi
+
+# Check if yq is mikefarah/yq (not python-yq)
+YQ_VERSION=$(yq --version 2>&1)
+if ! echo "$YQ_VERSION" | grep -q "mikefarah"; then
+    echo "Error: Wrong yq version installed"
+    echo ""
+    echo "You have python-yq installed, but this script requires mikefarah/yq."
+    echo ""
+    echo "To fix this:"
+    echo "  1. Remove python-yq: sudo apt remove yq"
+    echo "  2. Run init.sh again: sudo ./init.sh"
+    echo ""
+    echo "Or manually install mikefarah/yq:"
+    echo "  wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq"
+    echo "  chmod +x /usr/local/bin/yq"
+    exit 1
+fi
+
 # Initialize tput colors
 if command -v tput >/dev/null 2>&1 && [ -t 1 ]; then
     RED=$(tput setaf 1)

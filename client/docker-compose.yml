@@ -3,18 +3,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        # SSH key filename in build context (use copy-key.sh script first)
-        # Default: ec2.pem
-        SSH_KEY_FILE: ec2.pem
     container_name: reverse-tunnel
     restart: unless-stopped
     environment:
       # Client configuration file (copied into image during build)
       - CLIENT_CONFIG=/app/client.yml
-
-      # SSH key path (copied into image during build)
-      - SSH_KEY_PATH=/app/ssh/ec2.pem
 
       # Target host for port forwarding (use 'localhost' for host network mode)
       - TARGET_HOST=localhost

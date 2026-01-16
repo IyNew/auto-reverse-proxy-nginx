@@ -18,17 +18,12 @@ Docker container that establishes reverse SSH tunnels to a remote server using `
 
 ## Quick Start
 
-1. **Copy your SSH key:**
-   ```bash
-   cp ~/.ssh/ec2.pem ./ec2.pem
-   chmod 600 ./ec2.pem
-   ```
-
-2. **Configure tunnels in `client.yml`:**
+1. **Configure SSH key path in `client.yml`:**
    ```yaml
    ssh:
      remote_host: your-host.com
      remote_user: ubuntu
+     private_key: ~/.ssh/id_rsa     # Full path to your SSH key
 
    tunnels:
      app1:
@@ -39,13 +34,17 @@ Docker container that establishes reverse SSH tunnels to a remote server using `
        remote_port: 8090
    ```
 
-3. **Build and start:**
+2. **Prepare and build:**
    ```bash
+   # Run prepare script to copy SSH key from client.yml path
+   ./prepare.sh
+
+   # Build and start container
    docker compose build
    docker compose up -d
    ```
 
-4. **View logs:**
+3. **View logs:**
    ```bash
    # All container logs
    docker compose logs -f
@@ -63,6 +62,7 @@ Docker container that establishes reverse SSH tunnels to a remote server using `
 ssh:
   remote_host: your-host.com     # Remote server hostname or IP (required)
   remote_user: ubuntu            # SSH username (default: ubuntu)
+  private_key: ~/.ssh/id_rsa     # Full path to SSH private key (supports ~ expansion)
 
 tunnels:
   tunnel_name:                   # Unique identifier for the tunnel
@@ -70,18 +70,15 @@ tunnels:
     remote_port: 8000            # Port on remote server to forward to
 ```
 
+**Note:** The `prepare.sh` script reads the `ssh.private_key` path and copies the key to `private.key` before building the Docker image.
+
 ### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CLIENT_CONFIG` | `/app/client.yml` | Path to client configuration file |
-| `SSH_KEY_PATH` | `/app/ssh/ec2.pem` | Path to SSH private key in container |
 | `TARGET_HOST` | `localhost` | Target host for port forwarding |
 | `LOG_DIR` | `/app/logs` | Directory for tunnel logs |
-
-### Build Arguments
-
-- **SSH_KEY_FILE**: Filename of the SSH key in the build context (default: `ec2.pem`)
 
 ## Accessing Services
 
@@ -102,8 +99,8 @@ To access a service in another Docker container:
 
 ### Tunnel fails to establish
 
-- Verify SSH key permissions: `chmod 600 ./ec2.pem`
-- Check remote server is accessible: `ssh -i ec2.pem user@host`
+- Verify SSH key permissions: `chmod 600 ~/.ssh/id_rsa` (or your key file)
+- Check remote server is accessible: `ssh -i ~/.ssh/id_rsa user@host`
 - Ensure remote server has been set up with `setup-server.sh`
 - Verify `remote_port` is not already in use on remote server
 
@@ -111,7 +108,8 @@ To access a service in another Docker container:
 
 - Check logs: `docker compose logs`
 - Verify `remote_host` is set correctly in `client.yml`
-- Ensure SSH key is mounted correctly
+- Ensure you ran `./prepare.sh` before building (copies SSH key to `private.key`)
+- Verify the `ssh.private_key` path in `client.yml` points to a valid SSH key file
 
 ### Connection drops frequently
 
@@ -121,9 +119,9 @@ To access a service in another Docker container:
 
 ## Security Notes
 
-- **SSH keys are copied into the Docker image** - be aware that keys are embedded in the image
-- Consider using Docker secrets or mounted volumes for production deployments
-- **Never commit SSH keys to version control** - they are excluded via `.gitignore`
+- **SSH keys are copied into the Docker image** - the `prepare.sh` script copies your key to `private.key` which is embedded in the image
+- `private.key` is excluded from version control via `.gitignore`
+- Consider using Docker secrets or mounted volumes for production deployments if security is a concern
 
 ## Stopping the Container
 

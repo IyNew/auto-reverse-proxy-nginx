@@ -36,17 +36,17 @@ sudo ./init.sh
 
 ### 3. Configure domains
 
-Each domain gets its own configuration file in `servers/`:
+Each domain gets its own configuration file in `configs/`:
 
 ```bash
 # Copy the example configuration
-cp servers/example.com.yml servers/your-domain.com.yml
+cp configs/example.com.yml configs/your-domain.com.yml
 
 # Edit the configuration
-vim servers/your-domain.com.yml
+vim configs/your-domain.com.yml
 
 # Apply the configuration
-sudo ./setup-server.sh servers/your-domain.com.yml
+sudo ./setup-server.sh configs/your-domain.com.yml
 ```
 
 ## Scripts
@@ -71,7 +71,7 @@ This script:
 Configure a single domain. Run this for each domain you want to host.
 
 ```bash
-sudo ./setup-server.sh servers/example.com.yml
+sudo ./setup-server.sh configs/example.com.yml
 ```
 
 This script:
@@ -84,9 +84,9 @@ This script:
 
 ## Domain Configuration
 
-Domain configuration files are stored in `servers/` directory.
+Domain configuration files are stored in `configs/` directory.
 
-### Example (`servers/example.com.yml`)
+### Example (`configs/example.com.yml`)
 
 ```yaml
 # Domain name - used as nginx server_name and config filename
@@ -131,13 +131,13 @@ You can host multiple domains on the same server:
 
 ```bash
 # Setup first domain
-sudo ./setup-server.sh servers/example.com.yml
+sudo ./setup-server.sh configs/example.com.yml
 
 # Setup second domain
-sudo ./setup-server.sh servers/another-domain.com.yml
+sudo ./setup-server.sh configs/another-domain.com.yml
 
 # Setup third domain
-sudo ./setup-server.sh servers/third-domain.com.yml
+sudo ./setup-server.sh configs/third-domain.com.yml
 ```
 
 Each domain gets:
@@ -151,12 +151,12 @@ To update an existing domain configuration:
 
 1. Edit the YAML file:
    ```bash
-   vim servers/example.com.yml
+   vim configs/example.com.yml
    ```
 
 2. Re-run the setup script:
    ```bash
-   sudo ./setup-server.sh servers/example.com.yml
+   sudo ./setup-server.sh configs/example.com.yml
    ```
 
 The script will update the nginx configuration and reload nginx.
@@ -177,7 +177,7 @@ sudo certbot delete --cert-name example.com
 sudo systemctl reload nginx
 
 # Remove the YAML file
-rm servers/example.com.yml
+rm configs/example.com.yml
 ```
 
 ## Port Mapping
@@ -192,7 +192,7 @@ tunnels:
     remote_port: 9000
 ```
 
-**Domain (`servers/example.com.yml`):**
+**Domain (`configs/example.com.yml`):**
 ```yaml
 locations:
   myapp:
@@ -271,5 +271,5 @@ sudo certbot certificates
 
 ## See Also
 
-- [Domain Configurations Documentation](servers/README.md)
+- [Domain Configurations Documentation](configs/README.md)
 - [Client Documentation](../client/README.md)

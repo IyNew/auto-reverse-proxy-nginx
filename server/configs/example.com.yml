@@ -18,6 +18,11 @@ locations:
     path: /app2/
     backend_port: 8090
 
+  # Example: Root path serves a main application
+  # root:
+  #   path: /
+  #   backend_port: 3000
+
 # HTTPS/SSL configuration
 https:
   # Enable HTTPS with Let's Encrypt certificates

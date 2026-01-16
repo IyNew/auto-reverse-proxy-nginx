@@ -1,6 +1,7 @@
 ssh:
   remote_host: your-host.com
   remote_user: ubuntu
+  private_key: ~/.ssh/id_rsa
 
 tunnels:
   app1:

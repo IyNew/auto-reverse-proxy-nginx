@@ -61,7 +61,7 @@ Run the setup script from the server directory:
 
 ```bash
 cd ..
-sudo ./setup-server.sh servers/your-domain.com.yml
+sudo ./setup-server.sh configs/your-domain.com.yml
 ```
 
 This will:
@@ -107,12 +107,36 @@ locations:
     backend_port: 9000      # Port to forward to
 ```
 
+**Root Path Example:**
+For domains that serve a single application at the root path:
+
+```yaml
+locations:
+  root:
+    path: /                 # Root path (/) serves the entire domain
+    backend_port: 8000
+```
+
+**Mixed Example:**
+You can also mix root and sub-path locations:
+
+```yaml
+locations:
+  main:
+    path: /                 # Main application at root
+    backend_port: 8000
+
+  api:
+    path: /api/             # API at sub-path
+    backend_port: 8080
+```
+
 ## Multiple Domains
 
 You can have multiple domain configuration files:
 
 ```
-servers/
+configs/
 ├── example.com.yml
 ├── another-domain.com.yml
 └── third-domain.com.yml
@@ -127,7 +151,7 @@ To update an existing domain configuration:
 1. Edit the YAML file
 2. Re-run the setup script:
    ```bash
-   sudo ./setup-server.sh servers/example.com.yml
+   sudo ./setup-server.sh configs/example.com.yml
    ```
 
 The script will update the nginx configuration and reload nginx.
@@ -148,7 +172,7 @@ sudo certbot delete --cert-name example.com
 sudo systemctl reload nginx
 
 # Remove the YAML file
-rm servers/example.com.yml
+rm configs/example.com.yml
 ```
 
 ## Port Mapping
@@ -163,7 +187,7 @@ tunnels:
     remote_port: 9000  # Must match backend_port in domain YAML
 ```
 
-**Domain (`servers/example.com.yml`):**
+**Domain (`configs/example.com.yml`):**
 ```yaml
 locations:
   myapp:

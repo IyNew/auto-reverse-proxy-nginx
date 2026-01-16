@@ -4,7 +4,6 @@ set -e
 
 # Configuration file path
 CLIENT_CONFIG=${CLIENT_CONFIG:-/app/client.yml}
-SSH_KEY_PATH=${SSH_KEY_PATH:-/app/ssh/ec2.pem}
 TARGET_HOST=${TARGET_HOST:-localhost}
 LOG_DIR=${LOG_DIR:-/app/logs}
 
@@ -18,6 +17,7 @@ fi
 if [ ! -f "$SSH_KEY_PATH" ]; then
     echo "Error: SSH key not found at $SSH_KEY_PATH"
     echo "The SSH key should have been copied into the image during build"
+    echo "Run './prepare.sh' to copy the key to the build context"
     exit 1
 fi
 
@@ -37,6 +37,9 @@ mkdir -p "$LOG_DIR"
 REMOTE_HOST=$(yq eval '.ssh.remote_host' "$CLIENT_CONFIG")
 REMOTE_USER=$(yq eval '.ssh.remote_user' "$CLIENT_CONFIG")
 
+# SSH key is copied to a fixed location by prepare.sh
+SSH_KEY_PATH=/app/ssh/private.key
+
 if [ -z "$REMOTE_HOST" ] || [ "$REMOTE_HOST" = "null" ]; then
     echo "Error: remote_host not found in client configuration"
     exit 1
@@ -52,7 +55,6 @@ echo "SSH Tunnel Client Configuration"
 echo "=========================================="
 echo "Remote Host: $REMOTE_HOST"
 echo "Remote User: $REMOTE_USER"
-echo "SSH Key: $SSH_KEY_PATH"
 echo "Target Host: $TARGET_HOST"
 echo "Config File: $CLIENT_CONFIG"
 echo "=========================================="

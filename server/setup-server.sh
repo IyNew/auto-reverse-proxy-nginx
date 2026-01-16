@@ -13,7 +13,7 @@ if [ -z "$1" ]; then
     echo "Usage: $0 <domain-config-file.yml>"
     echo ""
     echo "Example:"
-    echo "  $0 servers/example.com.yml"
+    echo "  $0 configs/example.com.yml"
     exit 1
 fi
 
@@ -114,12 +114,19 @@ NGINX_CONFIG=$(mktemp)
     echo ""
 
     # Read locations from YAML and generate location blocks
-    # First, check if there are any locations
     LOCATION_COUNT=$(yq eval '.locations | length' "$DOMAIN_CONFIG")
     if [ "$LOCATION_COUNT" -gt 0 ] && [ "$LOCATION_COUNT" != "null" ]; then
-        while IFS= read -r line; do
-            eval "$line"
-        done < <(yq eval '.locations | to_entries[] | "PATH=\(.value.path); PORT=\(.value.backend_port)"' "$DOMAIN_CONFIG")
+        yq eval '.locations | to_entries[] | "\(.key)|\(.value.path)|\(.value.backend_port)"' "$DOMAIN_CONFIG" | while IFS='|' read -r name path port; do
+            echo "    # Location: $name"
+            echo "    location $path {"
+            echo "        proxy_pass http://localhost:$port;"
+            echo "        proxy_set_header Host \$host;"
+            echo "        proxy_set_header X-Real-IP \$remote_addr;"
+            echo "        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;"
+            echo "        proxy_set_header X-Forwarded-Proto \$scheme;"
+            echo "    }"
+            echo ""
+        done
     fi
 
     echo "}"

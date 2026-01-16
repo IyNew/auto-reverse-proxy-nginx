@@ -3,6 +3,7 @@
 ec2.pem
 id_rsa
 *.key
+client/private.key
 
 # Logs
 logs/

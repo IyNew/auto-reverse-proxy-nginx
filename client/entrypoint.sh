@@ -7,6 +7,9 @@ CLIENT_CONFIG=${CLIENT_CONFIG:-/app/client.yml}
 TARGET_HOST=${TARGET_HOST:-localhost}
 LOG_DIR=${LOG_DIR:-/app/logs}
 
+# SSH key is copied to a fixed location by prepare.sh
+SSH_KEY_PATH=/app/ssh/private.key
+
 # Check if client config file exists
 if [ ! -f "$CLIENT_CONFIG" ]; then
     echo "Error: Client configuration file not found at $CLIENT_CONFIG"
@@ -36,9 +39,6 @@ mkdir -p "$LOG_DIR"
 # Read SSH configuration from YAML
 REMOTE_HOST=$(yq eval '.ssh.remote_host' "$CLIENT_CONFIG")
 REMOTE_USER=$(yq eval '.ssh.remote_user' "$CLIENT_CONFIG")
-
-# SSH key is copied to a fixed location by prepare.sh
-SSH_KEY_PATH=/app/ssh/private.key
 
 if [ -z "$REMOTE_HOST" ] || [ "$REMOTE_HOST" = "null" ]; then
     echo "Error: remote_host not found in client configuration"

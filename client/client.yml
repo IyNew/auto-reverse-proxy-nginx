@@ -1,13 +1,9 @@
 ssh:
-  remote_host: your-host.com
+  remote_host: ec2-3-19-32-30.us-east-2.compute.amazonaws.com
   remote_user: ubuntu
   private_key: ~/.ssh/id_rsa
 
 tunnels:
-  app1:
-    local_port: 5000
+  openlist:
+    local_port: 5244
     remote_port: 8000
-
-  app2:
-    local_port: 4999
-    remote_port: 8090

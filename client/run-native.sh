@@ -61,30 +61,72 @@ start() {
 
 # Function to stop tunnel
 stop() {
-    if ! is_running; then
-        echo "Tunnel is not running"
-        return 1
+    # Read remote host from config to identify tunnel processes
+    REMOTE_HOST=""
+    if [ -f "$SCRIPT_DIR/client.yml" ] && command -v yq >/dev/null 2>&1; then
+        REMOTE_HOST=$(yq eval '.ssh.remote_host' "$SCRIPT_DIR/client.yml" 2>/dev/null || echo "")
     fi
     
-    PID=$(cat "$PID_FILE")
-    echo "Stopping tunnel (PID: $PID)..."
-    
-    # Kill the main process and all autossh processes
-    kill "$PID" 2>/dev/null || true
-    
-    # Also kill any autossh processes
-    pkill -f "autossh.*entrypoint-native" 2>/dev/null || true
-    
-    # Wait a bit for processes to terminate
-    sleep 2
-    
-    # Force kill if still running
-    if ps -p "$PID" > /dev/null 2>&1; then
-        kill -9 "$PID" 2>/dev/null || true
+    PID=""
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat "$PID_FILE")
     fi
     
+    echo "Stopping tunnel..."
+    
+    # Kill the main entrypoint process if PID file exists and process is running
+    if [ -n "$PID" ] && ps -p "$PID" > /dev/null 2>&1; then
+        echo "  Killing main process (PID: $PID)..."
+        kill "$PID" 2>/dev/null || true
+        sleep 1
+        if ps -p "$PID" > /dev/null 2>&1; then
+            kill -9 "$PID" 2>/dev/null || true
+        fi
+    fi
+    
+    # Kill all autossh processes (they don't have entrypoint-native in their cmdline)
+    AUTOSSH_PIDS=$(pgrep -f "autossh.*-R" 2>/dev/null || true)
+    if [ -n "$AUTOSSH_PIDS" ]; then
+        echo "  Killing autossh processes..."
+        echo "$AUTOSSH_PIDS" | xargs kill 2>/dev/null || true
+        sleep 1
+        # Force kill any remaining
+        echo "$AUTOSSH_PIDS" | xargs kill -9 2>/dev/null || true
+    fi
+    
+    # Kill autossh processes by remote host if we have it
+    if [ -n "$REMOTE_HOST" ]; then
+        AUTOSSH_BY_HOST=$(pgrep -f "autossh.*${REMOTE_HOST}" 2>/dev/null || true)
+        if [ -n "$AUTOSSH_BY_HOST" ]; then
+            echo "  Killing autossh processes for $REMOTE_HOST..."
+            echo "$AUTOSSH_BY_HOST" | xargs kill 2>/dev/null || true
+            sleep 1
+            echo "$AUTOSSH_BY_HOST" | xargs kill -9 2>/dev/null || true
+        fi
+    fi
+    
+    # Kill any SSH processes spawned by autossh (they have -R in their command)
+    SSH_PIDS=$(pgrep -f "ssh.*-R.*:.*:" 2>/dev/null || true)
+    if [ -n "$SSH_PIDS" ]; then
+        echo "  Killing SSH tunnel processes..."
+        echo "$SSH_PIDS" | xargs kill 2>/dev/null || true
+        sleep 1
+        echo "$SSH_PIDS" | xargs kill -9 2>/dev/null || true
+    fi
+    
+    # Clean up PID file
     rm -f "$PID_FILE"
-    echo "Tunnel stopped"
+    
+    # Verify all processes are stopped
+    sleep 1
+    REMAINING=$(pgrep -f "autossh.*-R\|ssh.*-R.*:" 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$REMAINING" -gt 0 ]; then
+        echo "  Warning: $REMAINING tunnel process(es) may still be running"
+        echo "  Remaining processes:"
+        pgrep -f "autossh.*-R\|ssh.*-R.*:" 2>/dev/null | xargs ps -p 2>/dev/null || true
+    else
+        echo "Tunnel stopped successfully"
+    fi
 }
 
 # Function to restart tunnel

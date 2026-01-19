@@ -1,9 +1,9 @@
 ssh:
-  remote_host: remote host name
-  remote_user: ubuntu // user name for ssh
-  private_key: ~/.ssh/id_rsa
+  remote_host: ec2-3-144-34-23.us-east-2.compute.amazonaws.com
+  remote_user: ubuntu 
+  private_key: ~/.ssh/nd-wenyi-mbp.pem
 
 tunnels:
   openlist:
-    local_port: 80
-    remote_port: 8000
+    local_port: 5244
+    remote_port: 8100

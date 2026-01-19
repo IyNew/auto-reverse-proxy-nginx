@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -38,15 +38,26 @@ if [ -z "$SSH_KEY_PATH" ]; then
     if command -v yq >/dev/null 2>&1 && [ -f "$CLIENT_CONFIG" ]; then
         SSH_KEY_PATH=$(yq eval '.ssh.private_key' "$CLIENT_CONFIG" 2>/dev/null || echo "")
         # Expand tilde if present
-        SSH_KEY_PATH="${SSH_KEY_PATH/#\~/$HOME}"
+        if [ -n "$SSH_KEY_PATH" ] && [ "$SSH_KEY_PATH" != "null" ]; then
+            # Replace ~ with $HOME using sed or parameter expansion
+            if [[ "$SSH_KEY_PATH" =~ ^~ ]]; then
+                SSH_KEY_PATH="${SSH_KEY_PATH/\~/$HOME}"
+            fi
+        fi
     fi
     
-    # Fallback to common locations
+    # Fallback to common locations only if key from config doesn't exist
     if [ -z "$SSH_KEY_PATH" ] || [ "$SSH_KEY_PATH" = "null" ] || [ ! -f "$SSH_KEY_PATH" ]; then
+        if [ -n "$SSH_KEY_PATH" ] && [ "$SSH_KEY_PATH" != "null" ] && [ ! -f "$SSH_KEY_PATH" ]; then
+            echo "Warning: SSH key from config not found: $SSH_KEY_PATH"
+        fi
+        # Try common default locations
         if [ -f "$HOME/.ssh/id_rsa" ]; then
             SSH_KEY_PATH="$HOME/.ssh/id_rsa"
+            echo "Using default SSH key: $SSH_KEY_PATH"
         elif [ -f "$HOME/.ssh/id_ed25519" ]; then
             SSH_KEY_PATH="$HOME/.ssh/id_ed25519"
+            echo "Using default SSH key: $SSH_KEY_PATH"
         else
             SSH_KEY_PATH=""
         fi
@@ -150,6 +161,9 @@ for TUNNEL_NAME in $TUNNEL_NAMES; do
     echo "Starting tunnel '$TUNNEL_NAME': $REMOTE_HOST:$REMOTE_PORT -> $TARGET_HOST:$LOCAL_PORT"
 
     # Start autossh tunnel for this port pair
+    # Use *:REMOTE_PORT to bind to all interfaces (0.0.0.0) instead of just 127.0.0.1
+    # Store the remote forwarding spec in a variable to ensure proper quoting
+    REMOTE_FORWARD="*:${REMOTE_PORT}:${TARGET_HOST}:${LOCAL_PORT}"
     autossh -M 0 \
         -o ServerAliveInterval=30 \
         -o ServerAliveCountMax=3 \
@@ -157,7 +171,7 @@ for TUNNEL_NAME in $TUNNEL_NAMES; do
         -o StrictHostKeyChecking=no \
         -o UserKnownHostsFile=/dev/null \
         -o IdentitiesOnly=yes \
-        -R ${REMOTE_PORT}:${TARGET_HOST}:${LOCAL_PORT} \
+        -R "$REMOTE_FORWARD" \
         -i "$SSH_KEY_PATH" \
         -N \
         -f \

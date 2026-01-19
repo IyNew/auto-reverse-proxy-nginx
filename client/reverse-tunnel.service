@@ -1,0 +1,21 @@
+[Unit]
+Description=Reverse SSH Tunnel Client
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=%h/.config/reverse-tunnel
+ExecStart=%h/.config/reverse-tunnel/entrypoint-native.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables (adjust as needed)
+Environment="CLIENT_CONFIG=%h/.config/reverse-tunnel/client.yml"
+Environment="LOG_DIR=%h/.config/reverse-tunnel/logs"
+Environment="TARGET_HOST=localhost"
+
+[Install]
+WantedBy=multi-user.target

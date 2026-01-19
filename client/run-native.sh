@@ -42,16 +42,30 @@ start() {
     fi
     
     echo "Starting reverse tunnel client..."
-    nohup "$ENTRYPOINT_SCRIPT" >> "$LOG_FILE" 2>&1 &
-    PID=$!
-    echo $PID > "$PID_FILE"
+    # Change to script directory and run - this ensures relative paths work correctly
+    # Use a subshell to not affect the parent's working directory
+    (cd "$SCRIPT_DIR" && nohup "$ENTRYPOINT_SCRIPT" >> "$LOG_FILE" 2>&1 &
+     echo $! > "$PID_FILE")
     
-    sleep 2
+    sleep 3
     
+    # Verify by checking if autossh process exists
     if is_running; then
-        echo "Tunnel started successfully (PID: $PID)"
-        echo "Logs: $LOG_FILE"
-        return 0
+        PID=$(cat "$PID_FILE")
+        
+        # Also verify autossh is running
+        sleep 2
+        AUTOSSH_COUNT=$(pgrep -f "autossh.*-R" 2>/dev/null | wc -l | tr -d ' ')
+        
+        if [ "$AUTOSSH_COUNT" -gt 0 ]; then
+            echo "Tunnel started successfully (PID: $PID, autossh processes: $AUTOSSH_COUNT)"
+            echo "Logs: $LOG_FILE"
+            return 0
+        else
+            echo "Warning: Main process started (PID: $PID) but no autossh tunnels detected"
+            echo "Check logs: $LOG_FILE"
+            return 0
+        fi
     else
         echo "Failed to start tunnel. Check logs: $LOG_FILE"
         rm -f "$PID_FILE"

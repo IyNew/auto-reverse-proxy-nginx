@@ -163,8 +163,9 @@ for TUNNEL_NAME in $TUNNEL_NAMES; do
     # Start autossh tunnel for this port pair
     # Use *:REMOTE_PORT to bind to all interfaces (0.0.0.0) instead of just 127.0.0.1
     # Store the remote forwarding spec in a variable to ensure proper quoting
+    # Note: Don't use autossh's -f flag as it has issues on macOS - use shell backgrounding instead
     REMOTE_FORWARD="*:${REMOTE_PORT}:${TARGET_HOST}:${LOCAL_PORT}"
-    autossh -M 0 \
+    nohup autossh -M 0 \
         -o ServerAliveInterval=30 \
         -o ServerAliveCountMax=3 \
         -o ExitOnForwardFailure=yes \
@@ -174,12 +175,10 @@ for TUNNEL_NAME in $TUNNEL_NAMES; do
         -R "$REMOTE_FORWARD" \
         -i "$SSH_KEY_PATH" \
         -N \
-        -f \
-        -E "$TUNNEL_LOG" \
-        ${REMOTE_USER}@${REMOTE_HOST}
+        ${REMOTE_USER}@${REMOTE_HOST} >> "$TUNNEL_LOG" 2>&1 &
 
-    # Wait a moment for autossh to start
-    sleep 1
+    # Wait for autossh to start and establish connection
+    sleep 3
 
     # Check if tunnel started successfully
     if pgrep -f "autossh.*-R.*${REMOTE_PORT}:${TARGET_HOST}:${LOCAL_PORT}.*${REMOTE_HOST}" > /dev/null; then

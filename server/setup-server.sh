@@ -86,7 +86,10 @@ DOMAIN_NAME=$(yq eval '.domain_name' "$DOMAIN_CONFIG")
 LISTEN_PORT=$(yq eval '.listen_port // "80"' "$DOMAIN_CONFIG")
 HTTPS_ENABLED=$(yq eval '.https.enabled // "false"' "$DOMAIN_CONFIG")
 HTTPS_EMAIL=$(yq eval '.https.email // ""' "$DOMAIN_CONFIG")
-HTTPS_WWW=$(yq eval 'if .https.www_domain == null then true else .https.www_domain end' "$DOMAIN_CONFIG")
+HTTPS_WWW=$(yq eval '.https.www_domain' "$DOMAIN_CONFIG")
+if [ "$HTTPS_WWW" = "null" ] || [ -z "$HTTPS_WWW" ]; then
+    HTTPS_WWW="true"
+fi
 HTTPS_FORCE_RENEW=$(yq eval '.https.force_renew // "false"' "$DOMAIN_CONFIG")
 
 # Validate required fields

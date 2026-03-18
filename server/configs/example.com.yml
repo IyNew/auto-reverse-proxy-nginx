@@ -13,6 +13,8 @@ locations:
   app1:
     path: /app1/
     backend_port: 8000
+    # Optional: Set maximum allowed body size for uploads (e.g., 10M, 1G)
+    # client_max_body_size: 50M
 
   app2:
     path: /app2/

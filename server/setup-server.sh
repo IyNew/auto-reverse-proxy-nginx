@@ -143,7 +143,7 @@ NGINX_CONFIG=$(mktemp)
     # Read locations from YAML and generate location blocks
     LOCATION_COUNT=$(yq eval '.locations | length' "$DOMAIN_CONFIG")
     if [ "$LOCATION_COUNT" -gt 0 ] && [ "$LOCATION_COUNT" != "null" ]; then
-        yq eval '.locations | to_entries[] | "\(.key)|\(.value.path)|\(.value.backend_port)"' "$DOMAIN_CONFIG" | while IFS='|' read -r name path port; do
+        yq eval '.locations | to_entries[] | "\(.key)|\(.value.path)|\(.value.backend_port)|\(.value.client_max_body_size // \"\")"' "$DOMAIN_CONFIG" | while IFS='|' read -r name path port max_body; do
             echo "    # Location: $name"
             echo "    location $path {"
             echo "        proxy_pass http://localhost:$port;"
@@ -151,6 +151,9 @@ NGINX_CONFIG=$(mktemp)
             echo "        proxy_set_header X-Real-IP \$remote_addr;"
             echo "        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;"
             echo "        proxy_set_header X-Forwarded-Proto \$scheme;"
+            if [ -n "$max_body" ] && [ "$max_body" != "null" ]; then
+                echo "        client_max_body_size $max_body;"
+            fi
             echo "    }"
             echo ""
         done

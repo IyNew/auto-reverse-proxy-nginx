@@ -9,15 +9,28 @@ listen_port: 80
 
 # Define location blocks that map URL paths to backend ports
 # Each location will be created as a nginx location block
+#
+# IMPORTANT: Trailing slash in 'path' affects URL proxying behavior
+#
+# With trailing slash (path: /app1/):
+#   Request: /app1/users  → Backend receives: /users (path stripped)
+#   Use this when your app expects requests at root path (e.g., Flask/FastAPI)
+#
+# Without trailing slash (path: /app1):
+#   Request: /app1/users  → Backend receives: /app1/users (full path preserved)
+#   Use this when your app handles the full path
+#
 locations:
   app1:
+    # With trailing slash - backend sees stripped path
     path: /app1/
     backend_port: 8000
     # Optional: Set maximum allowed body size for uploads (e.g., 10M, 1G)
     # client_max_body_size: 50M
 
   app2:
-    path: /app2/
+    # Without trailing slash - backend sees full path
+    path: /app2
     backend_port: 8090
 
   # Example: Root path serves a main application
